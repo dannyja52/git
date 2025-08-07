@@ -2236,9 +2236,8 @@ static void split_graph_merge_strategy(struct write_commit_graph_context *ctx)
 	uint32_t num_commits;
 	enum commit_graph_split_flags flags = COMMIT_GRAPH_SPLIT_UNSPECIFIED;
 	uint32_t i;
-
-	int max_commits = 0;
-	int size_mult = 2;
+	unsigned max_commits = 0;
+	unsigned size_mult = 2;
 
 	if (ctx->opts) {
 		max_commits = ctx->opts->max_commits;
