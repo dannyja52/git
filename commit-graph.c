@@ -1,5 +1,4 @@
 #define USE_THE_REPOSITORY_VARIABLE
-#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -570,7 +569,7 @@ static void validate_mixed_bloom_settings(struct commit_graph *g)
 static int add_graph_to_chain(struct commit_graph *g,
 			      struct commit_graph *chain,
 			      struct object_id *oids,
-			      int n)
+			      size_t n)
 {
 	struct commit_graph *cur_g = chain;
 
@@ -623,7 +622,7 @@ int open_commit_graph_chain(const char *chain_file,
 		close(*fd);
 		return 0;
 	}
-	if (st->st_size < the_hash_algo->hexsz) {
+	if (st->st_size < (ssize_t) the_hash_algo->hexsz) {
 		close(*fd);
 		if (!st->st_size) {
 			/* treat empty files the same as missing */
@@ -644,15 +643,16 @@ struct commit_graph *load_commit_graph_chain_fd_st(struct repository *r,
 	struct commit_graph *graph_chain = NULL;
 	struct strbuf line = STRBUF_INIT;
 	struct object_id *oids;
-	int i = 0, valid = 1, count;
+	int valid = 1;
 	FILE *fp = xfdopen(fd, "r");
+	size_t count;
 
 	count = st->st_size / (the_hash_algo->hexsz + 1);
 	CALLOC_ARRAY(oids, count);
 
 	odb_prepare_alternates(r->objects);
 
-	for (i = 0; i < count; i++) {
+	for (size_t i = 0; i < count; i++) {
 		struct odb_source *source;
 
 		if (strbuf_getline_lf(&line, fp) == EOF)
@@ -1146,12 +1146,12 @@ struct write_commit_graph_context {
 	int num_generation_data_overflows;
 	unsigned long approx_nr_objects;
 	struct progress *progress;
-	int progress_done;
+	uint64_t progress_done;
 	uint64_t progress_cnt;
 
 	char *base_graph_name;
-	int num_commit_graphs_before;
-	int num_commit_graphs_after;
+	uint32_t num_commit_graphs_before;
+	uint32_t num_commit_graphs_after;
 	char **commit_graph_filenames_before;
 	char **commit_graph_filenames_after;
 	char **commit_graph_hash_after;
@@ -1182,7 +1182,7 @@ static int write_graph_chunk_fanout(struct hashfile *f,
 				    void *data)
 {
 	struct write_commit_graph_context *ctx = data;
-	int i, count = 0;
+	size_t i, count = 0;
 	struct commit **list = ctx->commits.list;
 
 	/*
@@ -1210,7 +1210,8 @@ static int write_graph_chunk_oids(struct hashfile *f,
 {
 	struct write_commit_graph_context *ctx = data;
 	struct commit **list = ctx->commits.list;
-	int count;
+	size_t count;
+
 	for (count = 0; count < ctx->commits.nr; count++, list++) {
 		display_progress(ctx->progress, ++ctx->progress_cnt);
 		hashwrite(f, (*list)->object.oid.hash, the_hash_algo->rawsz);
@@ -1332,9 +1333,9 @@ static int write_graph_chunk_generation_data(struct hashfile *f,
 					     void *data)
 {
 	struct write_commit_graph_context *ctx = data;
-	int i, num_generation_data_overflows = 0;
+	int num_generation_data_overflows = 0;
 
-	for (i = 0; i < ctx->commits.nr; i++) {
+	for (size_t i = 0; i < ctx->commits.nr; i++) {
 		struct commit *c = ctx->commits.list[i];
 		timestamp_t offset;
 		repo_parse_commit(ctx->r, c);
@@ -1356,8 +1357,8 @@ static int write_graph_chunk_generation_data_overflow(struct hashfile *f,
 						      void *data)
 {
 	struct write_commit_graph_context *ctx = data;
-	int i;
-	for (i = 0; i < ctx->commits.nr; i++) {
+
+	for (size_t i = 0; i < ctx->commits.nr; i++) {
 		struct commit *c = ctx->commits.list[i];
 		timestamp_t offset = commit_graph_data_at(c)->generation - c->date;
 		display_progress(ctx->progress, ++ctx->progress_cnt);
@@ -1527,7 +1528,7 @@ static void add_missing_parents(struct write_commit_graph_context *ctx, struct c
 
 static void close_reachable(struct write_commit_graph_context *ctx)
 {
-	int i;
+	size_t i;
 	struct commit *commit;
 	enum commit_graph_split_flags flags = ctx->opts ?
 		ctx->opts->split_flags : COMMIT_GRAPH_SPLIT_UNSPECIFIED;
@@ -1621,10 +1622,9 @@ static void compute_reachable_generation_numbers(
 			struct compute_generation_info *info,
 			int generation_version)
 {
-	int i;
 	struct commit_list *list = NULL;
 
-	for (i = 0; i < info->commits->nr; i++) {
+	for (size_t i = 0; i < info->commits->nr; i++) {
 		struct commit *c = info->commits->list[i];
 		timestamp_t gen;
 		repo_parse_commit(info->r, c);
@@ -1715,7 +1715,7 @@ static void set_generation_v2(struct commit *c, timestamp_t t,
 
 static void compute_generation_numbers(struct write_commit_graph_context *ctx)
 {
-	int i;
+	size_t i;
 	struct compute_generation_info info = {
 		.r = ctx->r,
 		.commits = &ctx->commits,
@@ -1794,10 +1794,10 @@ static void trace2_bloom_filter_write_statistics(struct write_commit_graph_conte
 
 static void compute_bloom_filters(struct write_commit_graph_context *ctx)
 {
-	int i;
+	size_t i;
 	struct progress *progress = NULL;
 	struct commit **sorted_commits;
-	int max_new_filters;
+	size_t max_new_filters;
 
 	init_bloom_filters();
 
@@ -1815,7 +1815,7 @@ static void compute_bloom_filters(struct write_commit_graph_context *ctx)
 		QSORT(sorted_commits, ctx->commits.nr, commit_gen_cmp);
 
 	max_new_filters = ctx->opts && ctx->opts->max_new_filters >= 0 ?
-		ctx->opts->max_new_filters : ctx->commits.nr;
+		(size_t) ctx->opts->max_new_filters : ctx->commits.nr;
 
 	for (i = 0; i < ctx->commits.nr; i++) {
 		enum bloom_filter_computed computed = 0;
@@ -2018,10 +2018,10 @@ static void copy_oids_to_commits(struct write_commit_graph_context *ctx)
 	stop_progress(&ctx->progress);
 }
 
-static int write_graph_chunk_base_1(struct hashfile *f,
-				    struct commit_graph *g)
+static size_t write_graph_chunk_base_1(struct hashfile *f,
+				       struct commit_graph *g)
 {
-	int num = 0;
+	size_t num = 0;
 
 	if (!g)
 		return 0;
@@ -2035,7 +2035,7 @@ static int write_graph_chunk_base(struct hashfile *f,
 				    void *data)
 {
 	struct write_commit_graph_context *ctx = data;
-	int num = write_graph_chunk_base_1(f, ctx->new_base_graph);
+	size_t num = write_graph_chunk_base_1(f, ctx->new_base_graph);
 
 	if (num != ctx->num_commit_graphs_after - 1) {
 		error(_("failed to write correct number of base graph ids"));
@@ -2481,7 +2481,7 @@ static void expire_commit_graphs(struct write_commit_graph_context *ctx)
 		if (stat(path.buf, &st) < 0)
 			continue;
 
-		if (st.st_mtime > expire_time)
+		if ((unsigned) st.st_mtime > expire_time)
 			continue;
 		if (path.len < 6 || strcmp(path.buf + path.len - 6, ".graph"))
 			continue;
@@ -2577,7 +2577,7 @@ int write_commit_graph(struct odb_source *source,
 			ctx.changed_paths = 1;
 
 			/* don't propagate the hash_version unless unspecified */
-			if (bloom_settings.hash_version == -1)
+			if (bloom_settings.hash_version == (unsigned) -1)
 				bloom_settings.hash_version = g->bloom_filter_settings->hash_version;
 			bloom_settings.bits_per_entry = g->bloom_filter_settings->bits_per_entry;
 			bloom_settings.num_hashes = g->bloom_filter_settings->num_hashes;
