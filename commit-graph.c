@@ -1171,11 +1171,11 @@ struct write_commit_graph_context {
 	size_t total_bloom_filter_data_size;
 	const struct bloom_filter_settings *bloom_settings;
 
-	int count_bloom_filter_computed;
-	int count_bloom_filter_not_computed;
-	int count_bloom_filter_trunc_empty;
-	int count_bloom_filter_trunc_large;
-	int count_bloom_filter_upgraded;
+	unsigned count_bloom_filter_computed;
+	unsigned count_bloom_filter_not_computed;
+	unsigned count_bloom_filter_trunc_empty;
+	unsigned count_bloom_filter_trunc_large;
+	unsigned count_bloom_filter_upgraded;
 };
 
 static int write_graph_chunk_fanout(struct hashfile *f,
@@ -1780,16 +1780,16 @@ void ensure_generations_valid(struct repository *r,
 
 static void trace2_bloom_filter_write_statistics(struct write_commit_graph_context *ctx)
 {
-	trace2_data_intmax("commit-graph", ctx->r, "filter-computed",
-			   ctx->count_bloom_filter_computed);
-	trace2_data_intmax("commit-graph", ctx->r, "filter-not-computed",
-			   ctx->count_bloom_filter_not_computed);
-	trace2_data_intmax("commit-graph", ctx->r, "filter-trunc-empty",
-			   ctx->count_bloom_filter_trunc_empty);
-	trace2_data_intmax("commit-graph", ctx->r, "filter-trunc-large",
-			   ctx->count_bloom_filter_trunc_large);
-	trace2_data_intmax("commit-graph", ctx->r, "filter-upgraded",
-			   ctx->count_bloom_filter_upgraded);
+	trace2_data_uintmax("commit-graph", ctx->r, "filter-computed",
+			    ctx->count_bloom_filter_computed);
+	trace2_data_uintmax("commit-graph", ctx->r, "filter-not-computed",
+			    ctx->count_bloom_filter_not_computed);
+	trace2_data_uintmax("commit-graph", ctx->r, "filter-trunc-empty",
+			    ctx->count_bloom_filter_trunc_empty);
+	trace2_data_uintmax("commit-graph", ctx->r, "filter-trunc-large",
+			    ctx->count_bloom_filter_trunc_large);
+	trace2_data_uintmax("commit-graph", ctx->r, "filter-upgraded",
+			    ctx->count_bloom_filter_upgraded);
 }
 
 static void compute_bloom_filters(struct write_commit_graph_context *ctx)
