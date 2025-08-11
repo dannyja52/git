@@ -680,6 +680,7 @@ static unsigned msb(unsigned long val)
 struct min_abbrev_data {
 	unsigned int init_len;
 	unsigned int cur_len;
+	unsigned int max_len;
 	char *hex;
 	struct repository *repo;
 	const struct object_id *oid;
@@ -699,12 +700,12 @@ static inline char get_hex_char_from_oid(const struct object_id *oid,
 static int extend_abbrev_len(const struct object_id *oid, void *cb_data)
 {
 	struct min_abbrev_data *mad = cb_data;
-
 	unsigned int i = mad->init_len;
+
 	while (mad->hex[i] && mad->hex[i] == get_hex_char_from_oid(oid, i))
 		i++;
 
-	if (i < GIT_MAX_RAWSZ && i >= mad->cur_len)
+	if (mad->cur_len <= i && i < mad->max_len)
 		mad->cur_len = i + 1;
 
 	return 0;
@@ -864,6 +865,7 @@ int repo_find_unique_abbrev_r(struct repository *r, char *hex,
 	mad.repo = r;
 	mad.init_len = len;
 	mad.cur_len = len;
+	mad.max_len = hexsz;
 	mad.hex = hex;
 	mad.oid = oid;
 
