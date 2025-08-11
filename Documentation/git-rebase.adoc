@@ -81,7 +81,7 @@ Here is a simplified description of what `git rebase <upstream>` does:
    `git cherry-pick <commit>` for each commit. See REBASING MERGES for how merges
    are handled.
 5. Update your branch to point to the final commit with the equivalent
-   of `git checkout -C <branch>`.
+   of `git checkout -B <branch>`.
 
 [NOTE]
 When starting the rebase, `ORIG_HEAD` is set to point to the commit at the tip
