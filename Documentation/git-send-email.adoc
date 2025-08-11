@@ -311,7 +311,8 @@ must be used for each option.
 This feature requires setting up `git imap-send`. See linkgit:git-imap-send[1]
 for instructions.
 
---[no-]use-imap-only::
+--use-imap-only::
+--no-use-imap-only::
 	If this is set, all emails will only be copied to the IMAP folder specified
 	with `--imap-sent-folder` or `sendemail.imapSentFolder` and will not be sent
 	to the recipients. Useful if you just want to create a draft of the emails
